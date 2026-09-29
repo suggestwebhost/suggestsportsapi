@@ -1,4 +1,4 @@
-os 25.4
+os==25.4
 flask
 requests
 gunicorn
