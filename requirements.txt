@@ -1,4 +1,4 @@
-os==25.3
+os==25.3 -> 26.2.1
 flask
 requests
 gunicorn
