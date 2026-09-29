@@ -1,5 +1,5 @@
-pip install --upgrade pip
-os==26.2.1
+
+
 flask
 requests
 gunicorn
