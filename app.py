@@ -41,7 +41,7 @@ def get_team_sprites(team_name):
 # Route 2: The NEW Visual Viewer Dashboard
 @app.route('/view-sprites/<team_name>', methods=['GET'])
 def view_team_sprites(team_name):
-    get_team_sprites(team_name)
+    
 
     team_info = fetch_team_data(team_name)
     if not team_info:
