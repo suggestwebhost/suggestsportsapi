@@ -7,7 +7,7 @@ app = Flask(__name__)
 # 1. It looks for a private environment variable named 'SPORTS_DB_KEY'.
 # 2. If it doesn't find one, it automatically falls back to the free '123' test key.
 API_KEY = os.environ.get("SPORTS_DB_KEY")
-THE_SPORTS_DB_BASE_URL = f"https://thesportsdb.com/{API_KEY}"
+THE_SPORTS_DB_BASE_URL = f"https://thesportsdb.com/api/v1/json/{API_KEY}"
 
 @app.route('/team-sprites/<team_name>', methods=['GET'])
 def get_team_sprites(team_name):
