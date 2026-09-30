@@ -1,53 +1,51 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template_string
 import requests
 
 app = Flask(__name__)
 
-# 1. It looks for a private environment variable named 'SPORTS_DB_KEY'.
-# 2. If it doesn't find one, it automatically falls back to the free '123' test key.
+# Fallback developer token '3'
 API_KEY = os.environ.get("SPORTS_DB_KEY")
-THE_SPORTS_DB_BASE_URL = f"https://thesportsdb.com/api/v1/json/{API_KEY}"
+THE_SPORTS_DB_BASE_URL = f"https://thesportsdb.com{API_KEY}"
 
-@app.route('/team-sprites/<team_name>', methods=['GET'])
-def get_team_sprites(team_name):
+def fetch_team_data(team_name):
     search_url = f"{THE_SPORTS_DB_BASE_URL}/searchteams.php?t={team_name}"
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
     
     try:
-        search_response = requests.get(search_url, headers=headers)
-        search_response.raise_for_status()
-        search_data = search_response.json()
+        response = requests.get(search_url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
         
-        if not search_data or not search_data.get('teams'):
-            return jsonify({"error": f"No assets found for '{team_name}'"}), 404
-            
-        team_info = search_data['teams'][0] # Grab the first team match
-        
-        return jsonify({
-            "team_name": team_info.get("strTeam"),
-            "badge_url": team_info.get("strBadge"),          
-            "jersey_url": team_info.get("strEquipment"),      
-            "logo_url": team_info.get("strLogo"),            
-            "banner_url": team_info.get("strBanner")          
-        }), 200
+        # Check if 'teams' exists and is a valid non-empty list
+        if data and isinstance(data.get('teams'), list) and len(data['teams']) > 0:
+            return data['teams'][0]  # SAFE FIX: Grab the first element dictionary
+    except Exception as e:
+        print(f"Fetch log error: {str(e)}") # Prints the error in your terminal console
+    return None
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": "Failed to connect to provider backend", "details": str(e)}), 500
-
-# Route 2: The NEW Visual Viewer Dashboard
-@app.route('/view-sprites/<team_name>', methods=['GET'])
-def view_team_sprites(team_name):
-    
-
+# Route 1: Raw JSON endpoint
+@app.route('/team-sprites/<team_name>', methods=['GET'])
+def get_team_sprites(team_name):
     team_info = fetch_team_data(team_name)
     if not team_info:
-        return f"<h1>Team '{team_name}' not found.</h1>", 404
+        return jsonify({"error": f"No assets found for '{team_name}'"}), 404
+        
+    return jsonify({
+        "team_name": team_info.get("strTeam"),
+        "badge_url": team_info.get("strBadge"),          
+        "jersey_url": team_info.get("strEquipment"),      
+        "logo_url": team_info.get("strLogo"),            
+        "banner_url": team_info.get("strBanner")          
+    }), 200
 
-    # Use a fallback image placeholder if the API returns null/empty links
+# Route 2: HTML Image Viewer
+@app.route('/view-sprites/<team_name>', methods=['GET'])
+def view_team_sprites(team_name):
+    team_info = fetch_team_data(team_name)
+    if not team_info:
+        return f"<h1>Team '{team_name}' not found or has no available data.</h1>", 404
+
     placeholder = "https://placehold.co"
     
     badge = team_info.get("strBadge") or placeholder
@@ -56,7 +54,6 @@ def view_team_sprites(team_name):
     banner = team_info.get("strBanner") or placeholder
     name = team_info.get("strTeam", team_name)
 
-    # Basic, clean responsive HTML string template
     html_template = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -79,7 +76,6 @@ def view_team_sprites(team_name):
     <body>
         <div class="container">
             <h1>🎨 {name} Sprite Viewer</h1>
-            
             <div class="grid">
                 <div class="card">
                     <h3>Official Badge</h3>
@@ -94,7 +90,6 @@ def view_team_sprites(team_name):
                     <img src="{logo}" alt="Logo">
                 </div>
             </div>
-
             <div class="banner-box">
                 <h3>Horizontal Banner</h3>
                 <img src="{banner}" alt="Banner">
@@ -104,8 +99,6 @@ def view_team_sprites(team_name):
     </html>
     """
     return render_template_string(html_template)
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=5000)
